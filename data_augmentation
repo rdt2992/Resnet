@@ -1,0 +1,207 @@
+from imgaug import augmenters as iaa
+import numpy as np
+import cv2
+import os
+iname = []
+
+def load_images_from_folder(folder):
+    images = []
+    global iname
+    for root, dirs,fname in os.walk(folder):
+
+        for j in fname:
+            if 'jpg' in j:
+                img = cv2.imread(os.path.join(root, j))
+                images.append(img)
+                iname.append(j)
+    return images
+
+def write_images(images, iname, name,wpath):
+    for i in range(0,len(images)):
+        cv2.imwrite(wpath + "%d_%s"%(name,iname[i]), images[i])
+
+def augmentations1(images):
+    seq1 = iaa.Sequential([iaa.AverageBlur(k=(2.7)),iaa.MedianBlur(k=(3,11))])
+    seq2 = iaa.ChannelShuffle(p=1.0)
+    seq3 = iaa.Dropout((0.05,0.1), per_channel=0.5)
+    seq4 = iaa.Sequential([iaa.Add((-15,15)),iaa.Multiply((0.3,1.5))])
+
+    img1 = seq1.augment_images(images)
+    img2 = seq2.augment_images(images)
+    img3 = seq3.augment_images(images)
+    img4 = seq4.augment_images(images)
+
+    list = [img1,img2,img3,img4]
+    return list
+
+def rotate(images):
+    seq1 = iaa.Sequential([iaa.Rot90(1, False)])
+    seq2 = iaa.Sequential([iaa.Rot90(2, False)])
+    seq3 = iaa.Sequential([iaa.Rot90(3, False)])
+
+    img1 = seq1.augment_images(images)
+    img2 = seq2.augment_images(images)
+    img3 = seq3.augment_images(images)
+    return [img1,img2,img3]
+
+def augResize(images):
+    seq1 = iaa.Affine(scale=(0.5,0.5))
+    seq2 = iaa.Affine(scale=(1.5,1.5))
+
+    img1 = seq1.augment_images(images)
+    img2 = seq2.augment_images(images)
+    return [img1, img2]
+
+imgpath = 'C:\\Users\\AAA\\Desktop\\resnet\\labelme-master\\examples\\semantic_segmentation\\data_annotated'
+
+photos1 = load_images_from_folder(imgpath)
+
+
+#photo_aug = augmentations1(photos1)
+photo_aug = rotate(photos1)
+#photo_aug = augResize(photos1)
+
+
+wpath = "C:\\Users\\AAA\Desktop\\resnet\\labelme-master\\examples\\semantic_segmentation\\data_annotated\\"
+
+write_images(photo_aug[0],iname, 90, wpath)
+write_images(photo_aug[1],iname, 180,wpath)
+write_images(photo_aug[2],iname, 270,wpath)
+
+def jsonall():
+    import os
+    import json
+    import copy
+
+    folder = 'C:\\Users\\AAA\\Desktop\\resnet\\labelme-master\\examples\\semantic_segmentation\\data_annotated'
+
+    for root, dirs,fname in os.walk(folder):
+        #print(fname)
+        iname = fname
+        for j in fname:
+            #print(j)
+            if 'json' in j:
+                #print(j)
+                with open(folder + '\\'+j, 'r') as f2:
+                    data = json.load(f2)
+                f2.close()
+                #str(data).replace(j,'0_'+j)
+                data2 = copy.deepcopy(data)
+                data2['imagePath'] = '0_'+data['imagePath']
+                #print(data)
+                with open(folder + '\\'+data2['imagePath'].replace('jpg','json'), 'w') as f:
+                    json.dump(data2, f)
+                f.close()
+                data2['imagePath'] = '1_' + data['imagePath']
+                #print(data)
+                with open(folder + '\\' + data2['imagePath'].replace('jpg', 'json'), 'w') as f:
+                    json.dump(data2, f)
+                f.close()
+                data2['imagePath'] = '2_' + data['imagePath']
+                #print(data)
+                with open(folder + '\\' + data2['imagePath'].replace('jpg', 'json'), 'w') as f:
+                    json.dump(data2, f)
+                f.close()
+#jsonall()
+def json_rotate90():
+    import os
+    import json
+    import copy
+    import math
+
+    folder = 'C:\\Users\\AAA\\Desktop\\resnet\\labelme-master\\examples\\semantic_segmentation\\data_annotated'
+
+    for root, dirs, fname in os.walk(folder):
+        iname = fname
+        cy = 0
+        cx = 0
+        for j in fname:
+            if 'json' in j:
+                with open(folder + '\\' + j, 'r') as f2:
+                    data = json.load(f2)
+                data2 = copy.deepcopy(data)
+                data2['imagePath'] = '90_' + data['imagePath']
+                for j in range(len(data2['shapes'])):
+                    for i in range(len(data2['shapes'][j]['points'])):
+                        data2['shapes'][j]['points'][i][0] = math.cos(math.pi / 2) * (
+                                    data['shapes'][j]['points'][i][0] - cx) - math.sin(math.pi / 2) * (
+                                                                         data['shapes'][j]['points'][i][1] - cy) + cx+720
+                        data2['shapes'][j]['points'][i][1] = math.sin(math.pi / 2) * (
+                                    data['shapes'][j]['points'][i][0] - cx) + math.cos(math.pi / 2) * (
+                                                                         data['shapes'][j]['points'][i][1] - cy) + cy
+
+                f2.close()
+                with open(folder + '\\' + data2['imagePath'].replace('jpg', 'json'), 'w') as f:
+                    json.dump(data2, f)
+                data2 = copy.deepcopy(data)
+                data2['imagePath'] = '180_' + data['imagePath']
+                for j in range(len(data2['shapes'])):
+                    for i in range(len(data2['shapes'][j]['points'])):
+                        data2['shapes'][j]['points'][i][0] = math.cos(math.pi) * (
+                                    data['shapes'][j]['points'][i][0] - cx) - math.sin(math.pi) * (
+                                                                         data['shapes'][j]['points'][i][1] - cy) + cx+1280
+                        data2['shapes'][j]['points'][i][1] = math.sin(math.pi) * (
+                                    data['shapes'][j]['points'][i][0] - cx) + math.cos(math.pi) * (
+                                                                         data['shapes'][j]['points'][i][1] - cy) + cy+720
+                f.close()
+                with open(folder + '\\' + data2['imagePath'].replace('jpg', 'json'), 'w') as f:
+                    json.dump(data2, f)
+                data2 = copy.deepcopy(data)
+                data2['imagePath'] = '270_' + data['imagePath']
+                for j in range(len(data2['shapes'])):
+                    for i in range(len(data2['shapes'][j]['points'])):
+                        data2['shapes'][j]['points'][i][0] = math.cos(3 * math.pi / 2) * (
+                                    data['shapes'][j]['points'][i][0] - cx) - math.sin(3 * math.pi / 2) * (
+                                                                         data['shapes'][j]['points'][i][1] - cy) + cx
+                        data2['shapes'][j]['points'][i][1] = math.sin(3 * math.pi / 2) * (
+                                    data['shapes'][j]['points'][i][0] - cx) + math.cos(3 * math.pi / 2) * (
+                                                                         data['shapes'][j]['points'][i][1] - cy) + cy+1280
+                f.close()
+                with open(folder + '\\' + data2['imagePath'].replace('jpg', 'json'), 'w') as f:
+                    json.dump(data2, f)
+                f.close()
+json_rotate90()
+
+def json_rescale():
+    import os
+    import json
+    import copy
+
+    folder = 'C:\\Users\\AAA\\Desktop\\resnet\\labelme-master\\examples\\semantic_segmentation\\data_annotated'
+    cx = 640
+    cy = 360
+    for root, dirs, fname in os.walk(folder):
+        for j in fname:
+            if 'json' in j:
+                num = 50
+                scale = 0.5
+                with open(folder + '\\' + j, 'r') as f2:
+                    data = json.load(f2)
+                data2 = copy.deepcopy(data)
+                data2['imagePath'] = str(num)+'_' + data['imagePath']
+                for j in range(len(data2['shapes'])):
+                    for i in range(len(data2['shapes'][j]['points'])):
+                        data2['shapes'][j]['points'][i][0] = data['shapes'][j]['points'][i][0]*scale + (cx - scale*cx)
+                        data2['shapes'][j]['points'][i][1] = data['shapes'][j]['points'][i][1]*scale + (cy - scale*cy)
+                f2.close()
+                with open(folder + '\\' + data2['imagePath'].replace('jpg', 'json'), 'w') as f:
+                    json.dump(data2, f)
+                f.close()
+
+
+                scale = 1.5
+                num = 150
+                data2 = copy.deepcopy(data)
+                data2['imagePath'] = str(num) + '_' + data['imagePath']
+                for j in range(len(data2['shapes'])):
+                    for i in range(len(data2['shapes'][j]['points'])):
+                        data2['shapes'][j]['points'][i][0] = data['shapes'][j]['points'][i][0] * scale + (
+                                    cx - scale * cx)
+                        data2['shapes'][j]['points'][i][1] = data['shapes'][j]['points'][i][1] * scale + (
+                                    cy - scale * cy)
+                f2.close()
+                with open(folder + '\\' + data2['imagePath'].replace('jpg', 'json'), 'w') as f:
+                    json.dump(data2, f)
+                f.close()
+#json_rescale(1.5)
+#json_rescale()
