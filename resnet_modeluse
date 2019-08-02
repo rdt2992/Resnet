@@ -1,0 +1,69 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+import sys
+import tensorflow as tf
+import keras
+import cv2
+import os
+import matplotlib.pyplot as plt
+
+from keras.models import load_model
+import numpy as np
+model = load_model('lastModel.h5')
+
+#model.summary()
+
+def getName(n):
+  if n==0:
+    return 'Cab_soup'
+  elif n==1:
+    return 'Cutlet'
+  elif n==2:
+    return 'Dduk'
+  elif n==3:
+    return 'Fork'
+  elif n==4:
+    return 'Kimchi'
+  elif n==5:
+    return 'Mush_soup'
+  elif n==6:
+    return 'Pump_soup'
+
+imagew = 64
+imageh = 64
+
+path= './image2/'
+file_list = os.listdir(path)
+
+X = None
+#print(file_list)
+#_, _, l = os.walk('./image/')
+#print(file_list)
+for filename in file_list:
+  img = cv2.imread(path+filename)
+  #print(img)
+  if img is not None:
+    img = cv2.resize(img, None, fx=imagew / img.shape[1], fy=imageh / img.shape[0])
+    newone = (img / 256)
+    newone = newone[np.newaxis]
+    if X is None:
+      X = newone
+    else:
+      X = np.append(X, newone, axis=0)
+  #if subtract_pixel_mean:
+  #  x_train_mean = np.mean(newone, axis=0)
+  #  newone -= x_train_mean
+  #input_shape = newone.shape[1:]
+X = np.array(X)
+x_train_mean = np.mean(X, axis=0)
+X -= x_train_mean
+yhat = model.predict(X)
+  #print(yhat)
+num = np.argmax(yhat, axis=1)
+#print('The Answer is ', model.predict(newone))
+print(file_list)
+for i in range(len(num)):
+  print('Predict : ', getName(num[i]))
+  #, " or ", getName(np.argsort(yhat, axis=1)[0][5]))
+ # print('The Answer is ',getName(num))
