@@ -1,0 +1,33 @@
+import json
+def addNewMenu(f, contours2):
+    line = f.read()
+    #print(type(line))
+    data = json.loads(line)
+
+
+    print(data)
+    l = len(data["shapes"])
+   # json.dump(data, f)
+
+    for i in range(len(contours2)):
+        dic = {}
+        dic['fill_color'] = None
+        dic['line_color'] = None
+        dic['flags'] = None
+        dic['shape_type'] = "polygon"
+        dic['label'] = "new"+str(i)
+        dic['points'] = []
+        #print(type(dic['points']))
+        l = []
+        for j in range(len(contours2[i])):
+            #print(type(contours2[i][j][0]))
+            l.append(contours2[i][j][0].tolist())
+        dic['points'] = l
+
+        data["shapes"].append(dic)
+    #f.write(str(data))
+
+    print(data)
+
+    return data
+
