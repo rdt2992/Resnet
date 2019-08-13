@@ -1,0 +1,61 @@
+import cv2
+import copy
+
+# 윤곽선 검출 (Contour)
+# 이진화 영상에서 흰색 객체의 외곽과 내곽의 윤곽선을 검출한다
+
+import cv2
+import copy
+import os
+import json
+import jsonTest
+
+path_dir = "C:\\Users\\AAA\\Desktop\\resnet\\labelme-master\\examples\\semantic_segmentation\\data_annotated"
+file_list = os.listdir(path_dir)
+
+for name in file_list:
+   if '.json' not in name:
+      im = cv2.imread(path_dir + "\\"+name)
+      #print(im.shape)
+      height = im.shape[0]
+      width = im.shape[1]
+     # print(height, width)
+      im2 = copy.deepcopy(im)
+      gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+      ret, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+
+      thresh = cv2.erode(thresh, None, iterations=2)
+      #cv2.imshow("Thresh", thresh)
+
+      contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+      limit_area = 8000##########################################기준넓이
+
+   #print(contours)
+      area = []
+      contours2 = []
+      for contour in contours:
+
+   # 컨투어를 그림
+         areaone = cv2.contourArea(contour)
+         area.append(areaone)
+   #print(area)
+         if areaone>limit_area:#####################################################일정 넓이 이상이면 새로운 메뉴로 생각
+            contours2.append(contour)
+   #cv2.imshow("images%d"%1, im)
+   #cv2.waitKey(0)
+      #img = cv2.drawContours(im2, contours2, -1, (0,255,0), 2)
+####################################################################################################get Contour
+
+      fname = name
+      with open(path_dir + '\\' + fname.replace('jpg','json')) as f:
+         print(fname.replace('jpg','json'))
+         data = jsonTest.addNewMenu(f, contours2)
+      f.close()
+
+      with open(path_dir + '\\' + fname.replace('jpg', 'json'), 'w') as f:
+         json.dump(data, f)
+         f.close()
+############################################################################################### Add to Json
+      #   cv2.imshow("img",img)
+      #cv2.waitKey(0)
