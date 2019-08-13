@@ -1,0 +1,36 @@
+import random
+import os
+import os.path as osp
+#f = open("C:\\Users\\com\\Downloads\\labelme-master\\labelme-master\\examples\\semantic_segmentation\\data_dataset_voc\\JPEGImages\\trainval2.txt", 'r')
+#f2 = open("C:\\Users\\com\\Downloads\\labelme-master\\labelme-master\\examples\\semantic_segmentation\\data_dataset_voc\\JPEGImages\\trainval.txt", 'w')
+#f3 = open("C:\\Users\\com\\Downloads\\labelme-master\\labelme-master\\examples\\semantic_segmentation\\data_dataset_voc\\JPEGImages\\train.txt", 'w')
+#f4 = open("C:\\Users\\com\\Downloads\\labelme-master\\labelme-master\\examples\\semantic_segmentation\\data_dataset_voc\\JPEGImages\\val.txt", 'w')
+
+outdir = "C:\\Users\\com\\.mxnet\\datasets\\voc\\VOC2012\\"
+os.makedirs(osp.join(outdir,'ImageSets'))
+os.makedirs(osp.join(outdir+'ImageSets\\','Segmentation'))
+
+outdir = outdir + 'ImageSets\\Segmentation\\'
+
+f = open("C:\\Users\\com\\.mxnet\\datasets\\voc\\VOC2012\\JPEGImages\\trainval2.txt", 'r')
+f2 = open(outdir+"trainval.txt", 'w')
+f3 = open(outdir+"train.txt", 'w')
+f4 = open(outdir+"val.txt", 'w')
+
+
+
+while True:
+    line = f.readline()
+    if not line: break
+    line = line.replace(".jpg","")
+    #line = line.replace(".png","")
+    #print(line)
+    f2.write(line)
+    if random.random()<=0.8:
+        f3.write(line)
+    else:
+        f4.write(line)
+f.close()
+f2.close()
+f3.close()
+f4.close()
