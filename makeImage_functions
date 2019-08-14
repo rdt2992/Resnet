@@ -1,0 +1,117 @@
+import numpy as np
+from matplotlib import pyplot as plt
+import cv2
+import copy
+
+def arrToImage(arr):########2차원 array를 3차원 array로 변경(흰, 검만)
+    plate = np.where(arr == 1, 255, 0)#####orig4[0][3]=>arr
+    zero = np.zeros((720, 1280, 3), dtype=np.uint8)
+    zero[:, :, 0] = plate
+    zero[:, :, 1] = plate
+    zero[:, :, 2] = plate
+    return zero
+
+def foodImage(orig4):##############food class의 array를 이미지로
+    food = arrToImage(orig4[0][2])
+    plt.imshow(food)
+    plt.show()
+    return food
+
+def allmenuImage(orig2, plate, spoon):#######학습한 모든 메뉴의 masking 합을 이미지로
+    result = np.sum(orig2[0,1:], axis=0)
+    result -= orig2[0,plate]####################################### Index of Plate
+    result -= orig2[0,spoon]####################################### Index of Spoon
+    #result = np.array(result, dtype=np.uint8)
+    allmenu = arrToImage(result)
+    plt.imshow(allmenu)
+    plt.show()
+    return allmenu
+
+
+def food_notinAllmenu(food, allmenu, filename):##########새로 얻은 메뉴의 이미지
+    result = np.where(allmenu >= food, 0, 255)
+    result = np.array(result, dtype=np.uint8)
+    plt.imsave("c"+filename, result)
+    plt.imshow(result)
+    plt.show()
+    return result
+
+#get_new(foodImage(), allmenuImage())
+def makeNewJson(fname, height, width):#####해당 식판에 대한 Json파일 생성
+    json = {}
+    json['imagePath'] = fname
+    json['flags'] = {}
+    json['imageHeight'] = height
+    json['imageWidth'] = width
+    json['lineColor'] = [0,255,0,128]
+    json['version'] = "3.16.1"
+    json['fillColor'] = [255,0,0,128]
+    json['shapes'] = []
+    return json
+
+def addContourJson(contour, name, json):#######Contour하나 Json파일에 추가
+    #print(name)
+    for i in range(len(contour)):
+        dic = {}
+        dic['fill_color'] = None
+        dic['line_color'] = None
+        dic['flags'] = None
+        dic['shape_type'] = "polygon"
+        dic['label'] = name
+        dic['points'] = []
+        # print(type(dic['points']))
+        l = []
+        if len(contour[i])>2:
+            for j in range(len(contour[i])):
+                # print(type(contours2[i][j][0]))
+                l.append(contour[i][j][0].tolist())
+            dic['points'] = l
+
+            json['shapes'].append(dic)
+
+    return json
+
+def getContour(arr):##########흑백 이미지에서 Contour 추출
+
+    im2 = copy.deepcopy(arr)
+
+    gray = cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
+    ret, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+
+    thresh = cv2.erode(thresh, None, iterations=2)
+    # cv2.imshow("Thresh", thresh)
+
+    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    #img = cv2.drawContours(im2, contours, -1, (0,255,0), 2)
+    #cv2.imshow("images%d"%1, img)
+    #cv2.waitKey(0)
+
+    return contours
+
+def getNewContour(new):###############신메뉴의 Contour 추출, area넓이 반영
+    im2 = copy.deepcopy(new)
+
+    gray = cv2.cvtColor(new, cv2.COLOR_BGR2GRAY)
+    ret, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+
+    thresh = cv2.erode(thresh, None, iterations=2)
+    # cv2.imshow("Thresh", thresh)
+
+    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    limit_area = 10000  ##########################################기준넓이
+
+    # print(contours)
+    area = []
+    contours2 = []
+    for contour in contours:
+
+        # 컨투어를 그림
+        areaone = cv2.contourArea(contour)
+        area.append(areaone)
+        # print(area)
+        if areaone > limit_area:  #####################################################일정 넓이 이상이면 새로운 메뉴로 생각
+            contours2.append(contour)
+    return contours2
+
