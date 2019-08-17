@@ -1,0 +1,37 @@
+#############image to base64
+import base64
+import io
+import os.path as osp
+import os
+
+import PIL.Image
+
+def load_image_file(filename):
+    try:
+        image_pil = PIL.Image.open(filename)
+    except IOError:
+        print('Failed opening image file: {}'.format(filename))
+        return
+
+    # apply orientation to image according to exif
+    #image_pil = utils.apply_exif_orientation(image_pil)
+
+    with io.BytesIO() as f:
+        ext = osp.splitext(filename)[1].lower()
+        format = 'JPEG'
+        image_pil.save(f, format=format)
+
+        f.seek(0)
+        return f.read()
+
+#imagePath = osp.join(osp.dirname(filename), data['imagePath'])
+#imageData = self.load_image_file(imagePath)
+#imageData = base64.b64encode(imageData).decode('utf-8')
+
+path_dir = "C:\\Users\\AAA\\Desktop\\resnet\\labelme-master\\examples\\semantic_segmentation\\data_annotated"
+file_list = os.listdir(path_dir)
+
+def imagedata(imagePath):
+    imageData = load_image_file(imagePath)
+    imageData = base64.b64encode(imageData)
+    return imageData
