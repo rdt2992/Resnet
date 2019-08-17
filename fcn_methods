@@ -1,0 +1,48 @@
+import mxnet as mx
+import numpy as np
+
+
+def get_menus(allpath,menupath):
+    global newcnt
+    global newname
+    ##  전체 메뉴
+    allMenu = open(allpath, 'r')
+    ##테스트할 식단 메뉴
+    sMenu = open(menupath, 'r')
+    all = []
+    select = []
+    while True:
+        line = allMenu.readline()
+        if not line: break
+        all.append(line)
+    while True:
+        line = sMenu.readline()
+        if not line: break
+        select.append(line)
+        if line not in all:
+            newcnt += 1
+            newname.append(line)
+    allMenu.close()
+    sMenu.close()
+    menu = []
+
+    for i in range(len(select)):
+        # print(select[i])
+        if select[i] in all:
+            menu.append(all.index(select[i]))
+    return menu
+
+def get_menuTF(output, menu, threshold):
+    ex = mx.nd.exp(output - np.max(output))
+    new = mx.nd.zeros_like(ex)
+    m1 = ex.asnumpy()
+    new = new.asnumpy()
+    max1 = np.max(m1)
+    new[:, menu] = max1
+    insert_menu = np.where(m1 > new, 0, m1)  ####### new보다 크면 0 아니면 그대로
+    insert_menu = insert_menu / np.sum(insert_menu, axis=1)  #############
+
+    orig = insert_menu  ######model 1
+    orig = np.where(orig <= threshold, 0, 1)
+    orig[:, 0] = 1 - np.count_nonzero(orig, axis=1)
+    return orig
