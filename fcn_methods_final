@@ -1,0 +1,127 @@
+"""
+get_menus(allpath,menupath) : 테스트할 이미지 파일이 담고 있는 메뉴들과 학습한 전체 메뉴들을 list형태로 return해주는
+함수. 또한 이 과정에서 새로운 메뉴의 개수를 담고 있는 newcnt도 반환
+
+get_menuTF(output, menu, threshold) : output array에는 class별 predict결과가 수치로 담겨있음
+이 수치들 중에서 menu에 포함된 것들만 유효한 값들로 하여 이 수치들을 확률의 형태로 바꿈
+이 확률이 threshold보다 큰 경우만 해당 class라 하고, 작은 경우는 background로 바꿈
+
+makeData(orig, orig2, name, menu, all) : orig array에는 현재 예측한 정보가 담겨있고 orig2에는 food class에 대한 정보가 담김
+현재는 orig2는 사용하지 않고 예측한 contour들 중에서 일정 넓이 이상인 것들만 남겨두고 json파일을 생성
+추후에 충분히 다양한 class들이 학습되었을 때 신메뉴가 하나뿐이라면 orig2를 사용하여 contour를 자동으로 생성
+"""
+
+
+
+import mxnet as mx
+import numpy as np
+import makeImage
+
+
+
+def get_menus(allpath,menupath):
+    newcnt = 0
+    newname = []
+    ##  전체 메뉴
+    allMenu = open(allpath, 'r')
+    ##테스트할 식단 메뉴
+    sMenu = open(menupath, 'r')
+    all = []
+    select = []
+    while True:
+        line = allMenu.readline()
+        if not line: break
+        all.append(line)
+    while True:
+        line = sMenu.readline()
+        if not line: break
+        select.append(line)
+        if line not in all:
+            newcnt += 1
+            newname.append(line)
+    allMenu.close()
+    sMenu.close()
+    menu = []
+
+    for i in range(len(select)):
+        # print(select[i])
+        if select[i] in all:
+            menu.append(all.index(select[i]))
+    return menu,all, newcnt
+
+def get_menuTF(output, menu, threshold):
+    ex = mx.nd.exp(output - np.max(output))
+
+    new = mx.nd.zeros_like(ex)
+    m1 = ex.asnumpy()
+    ############################################
+    e = 0.000001
+    m1 += e
+    ############################################
+    new = new.asnumpy()
+    max1 = np.max(m1)
+    new[:, menu] = max1
+    insert_menu = np.where(m1 > new, 0, m1)  ####### new보다 크면 0 아니면 그대로
+    insert_menu = insert_menu / np.sum(insert_menu, axis=1)  #############
+
+    orig = insert_menu  ######model 1
+    orig = np.where(orig <= threshold, 0, 1)
+    orig[:, 0] = 1 - np.count_nonzero(orig, axis=1)
+    ##########################################################
+    #각 픽셀에 대해서 해당되는 class는 1, 아니면 0
+    return orig
+
+
+def makeData(orig, orig2, name, menu, all):
+        #############################################
+        #orig는 전체 메뉴를 학습한 모델의 결과
+        #orig2는 food, plate spoon만 학습한 모델의 결과
+        plateidx = 1
+        spoonidx = 2
+
+        food = makeImage.foodImage(orig2)
+        menus = makeImage.allmenuImage(orig, spoonidx, plateidx)
+        new = makeImage.food_notinAllmenu(food, menus)
+        contournew = makeImage.getNewContour(new)
+        ###############신메뉴의 contour
+        ##########################################################################################
+        #############------------------신메뉴 포함 사진 Json 파일 생성-------------------
+        import copy
+        import json
+        foodmenu = copy.deepcopy(menu)
+        foodmenu.remove(0)
+        foodmenu.remove(spoonidx)
+        foodmenu.remove(plateidx)
+        ########################class들 중 음식종류만 남김
+
+        ##########################필수#############################
+        #######학습용 dataset을 만들기 위해 json파일이 위치해야 하는 폴더
+        #######원본사진과 동일한 위치이거나
+        #######학습용 dataset을 모아둔 폴더 경로
+        p = "C:\\Users\\com\\PycharmProjects\\untitled\\test\\auto_test\\newTest\\"  ##########학습용 폴더
+        f = open(p + name.replace('jpg', 'json'), 'w')
+
+        data = makeImage.makeNewJson(name, orig.shape[2], orig.shape[3], p + name)
+
+        spoon = makeImage.arrToImage(orig[0][spoonidx])
+        contours = makeImage.getContour(spoon)
+        data = makeImage.addContourJson(contours, all[spoonidx].replace("\n",""),data)######spoon Json파일
+
+        plate = makeImage.arrToImage(orig[0][[plateidx]])
+        contours = makeImage.getContour(plate)
+        data = makeImage.addContourJson(contours, all[plateidx].replace("\n", ""), data)  #####plate Json파일
+
+        for i in foodmenu:
+            one = makeImage.arrToImage(orig[0][i])
+            contours = makeImage.getContour(one)
+            data = makeImage.addContourJson(contours, all[i].replace("\n", ""), data)  ######신메뉴 제외 음식Json파일
+
+        """ m2 = ["spoon","food","plate"]
+        for i in menu2[1:]:
+            one = makeImage.arrToImage(orig2[0][i])
+            contours = makeImage.getContour(one)
+            data = makeImage.addContourJson(contours, m2[i-1].replace("\n",""),data)######신메뉴 제외 음식Json파일
+        #data = makeImage.addContourJson(contournew, newname[0].replace("\n", ""), data)#####신메뉴 Json파일"""
+
+        json.dump(data, f)
+        f.close()
